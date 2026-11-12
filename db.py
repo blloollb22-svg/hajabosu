@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import (CheckConstraint, Column, Date, DateTime, Integer, MetaData, Table,
-                        Text, create_engine, func, select, text)
+                        Text, create_engine, func, select, text, update)
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import make_url
 
@@ -97,6 +97,44 @@ def 대장저장(행들: list[dict]) -> int:
     with 엔진().begin() as 연결:
         연결.execute(문장)
     return len(값들)
+
+
+def 접수저장(발견일, 접수자: str, 부서: str, 위치: str, 내용: str) -> int:
+    """접수 화면에서 들어온 한 건을 저장하고 id를 돌려준다. 처리상태는 미처리, 접수번호는 비워 둔다."""
+    초기화()
+    문장 = insert(접수).values(발견일=발견일, 접수자=접수자, 부서=부서, 위치=위치, 내용=내용).returning(접수.c.id)
+    with 엔진().begin() as 연결:
+        return 연결.execute(문장).scalar_one()
+
+
+def 미처리접수읽기() -> list[dict]:
+    """처리상태가 미처리인 접수를 들어온 순서(id)로 읽는다."""
+    초기화()
+    문장 = select(접수).where(접수.c.처리상태 == "미처리").order_by(접수.c.id)
+    with 엔진().connect() as 연결:
+        return [dict(행._mapping) for 행 in 연결.execute(문장)]
+
+
+def 접수읽기(접수id: int) -> dict | None:
+    초기화()
+    with 엔진().connect() as 연결:
+        행 = 연결.execute(select(접수).where(접수.c.id == 접수id)).first()
+    return dict(행._mapping) if 행 else None
+
+
+def 접수처리완료(접수id: int, 접수번호: str) -> None:
+    """접수에 접수번호를 적고 처리완료로 바꾼다."""
+    초기화()
+    with 엔진().begin() as 연결:
+        연결.execute(update(접수).where(접수.c.id == 접수id).values(접수번호=접수번호, 처리상태="처리완료"))
+
+
+def 미처리건수() -> int:
+    초기화()
+    with 엔진().connect() as 연결:
+        return 연결.execute(
+            select(func.count()).select_from(접수).where(접수.c.처리상태 == "미처리")
+        ).scalar_one()
 
 
 def 대장읽기() -> pd.DataFrame:

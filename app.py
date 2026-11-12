@@ -2,6 +2,7 @@
 import pandas as pd
 import streamlit as st
 
+import db
 import rules
 import run
 
@@ -22,7 +23,18 @@ def 공사정보() -> list[dict]:
     return rules.공사정보읽기()
 
 
+@st.cache_data(ttl="30s")
+def 미처리접수() -> int | None:
+    try:
+        return db.미처리건수()
+    except Exception:
+        return None
+
+
 def 원문읽기(파일명: str) -> str:
+    if 파일명.startswith("DB:접수#"):  # 접수 화면에서 들어온 건
+        접 = db.접수읽기(int(파일명.split("#")[1]))
+        return run.접수원문(접) if 접 else "(DB에서 이 접수를 찾지 못했습니다.)"
     return (run.입력폴더 / 파일명).read_text(encoding="utf-8")
 
 
@@ -32,20 +44,25 @@ st.caption("접수 원문을 AI가 읽고, 코드가 번호·기한·보증을 �
 # ---- 처리 실행 ----
 with st.container(horizontal=True, vertical_alignment="center"):
     다시처리 = st.button(
-        "접수함 처리",
+        "접수 처리",
         icon=":material/play_arrow:",
         type="primary",
-        help="접수함의 원문을 AI로 읽어 DB 하자대장에 저장합니다. AI를 건수만큼 호출하고, 같은 접수번호는 덮어씁니다.",
+        help="접수함 폴더의 원문과 DB의 미처리 접수를 AI로 읽어 DB 하자대장에 저장합니다. AI를 건수만큼 호출하고, 같은 원문은 같은 접수번호로 덮어씁니다.",
     )
-    st.caption(f"원문 {len(list(run.입력폴더.glob('*.txt')))}건 · 접수함 폴더 기준")
+    미처리 = 미처리접수()
+    st.caption(
+        f"접수함 파일 {len(list(run.입력폴더.glob('*.txt')))}건 · "
+        f"DB 미처리 접수 {'확인 못 함' if 미처리 is None else f'{미처리}건'}"
+    )
 
 if 다시처리:
-    with st.spinner("접수 원문을 처리하는 중입니다. AI를 건수만큼 호출합니다."):
+    with st.spinner("접수를 처리하는 중입니다. AI를 건수만큼 호출합니다."):
         try:
             run.처리()
         except Exception as e:
             st.error(f"처리 중 오류가 났습니다: {e}", icon=":material/error:")
     대장읽기.clear()
+    미처리접수.clear()
 
 try:
     df = 대장읽기()
