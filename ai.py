@@ -24,12 +24,14 @@ def 접수정리(원문: str) -> dict:
     지침 = (BASE / "지침" / "접수정리.md").read_text(encoding="utf-8")
     응답 = _client().messages.create(
         model=os.getenv("MODEL", "claude-haiku-5-5"),
-        max_tokens=500,
+        max_tokens=4000,  # 모델이 글자 수를 세며 생각하는 데도 토큰을 쓴다
         system=지침,
         messages=[{"role": "user", "content": 원문}],
     )
     # 모델이 생각 블록을 함께 보낼 수 있어서 글 블록만 모은다.
     글 = "".join(b.text for b in 응답.content if b.type == "text").strip()
+    if not 글:
+        raise ValueError(f"AI가 답을 비워 보냈습니다(종료 사유: {응답.stop_reason}). max_tokens를 확인하세요.")
     # 모델이 ```json 표시를 붙여도 JSON 부분만 꺼낸다.
     글 = 글[글.find("{"): 글.rfind("}") + 1]
     결과 = json.loads(글)

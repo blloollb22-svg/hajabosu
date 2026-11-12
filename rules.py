@@ -21,6 +21,18 @@ def 공사정보읽기(경로=None) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def 대장읽기():
+    """하자대장 읽기. 저장소는 db.py가 맡는다."""
+    import db
+    return db.대장읽기()
+
+
+def 대장저장(행들: list[dict]) -> int:
+    """하자대장 저장. 저장소는 db.py가 맡는다."""
+    import db
+    return db.대장저장(행들)
+
+
 def 접수번호(접수일: str, 순번: int) -> str:
     """HJ-접수일(YYYYMMDD)-순번(01부터). 순번은 같은 접수일 안에서 센다."""
     return f"HJ-{_날짜(접수일):%Y%m%d}-{순번:02d}"

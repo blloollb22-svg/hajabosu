@@ -1,5 +1,4 @@
-"""입력 폴더(data/접수함)를 일괄 처리해 하자대장.csv로 저장한다."""
-import csv
+"""입력 폴더(data/접수함)를 일괄 처리해 DB 하자대장에 저장한다."""
 import sys
 from collections import defaultdict
 from datetime import date
@@ -10,11 +9,6 @@ import rules
 
 BASE = Path(__file__).parent
 입력폴더 = BASE / "data" / "접수함"
-출력파일 = BASE / "data" / "하자대장.csv"
-
-# 업무설명 §2 하자대장 항목 순서
-칸 = ["접수번호", "접수일", "원문파일", "위치", "공종", "하자내용", "긴급도", "조치기한",
-     "공사번호", "시공업체", "준공일", "보증만료일", "보증판정", "책임구분", "상태", "비고"]
 
 
 def 파일명날짜(파일명: str) -> str:
@@ -57,11 +51,8 @@ def 처리():
             print(f'경고: {파일.name} 하자내용이 40자를 넘음({len(a["하자내용"])}자)', file=sys.stderr)
         print(행["접수번호"], 행["위치"], 행["공종"], 행["긴급도"], 행["보증판정"], 행["비고"])
 
-    with open(출력파일, "w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=칸)
-        w.writeheader()
-        w.writerows(행들)
-    print(f"{len(행들)}건 저장: {출력파일}")
+    rules.대장저장(행들)
+    print(f"{len(행들)}건 저장: DB 하자대장")
     return 행들
 
 

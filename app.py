@@ -12,9 +12,9 @@ CODE = ":green-badge[코드]"
 HUMAN = ":orange-badge[사람]"
 
 
-@st.cache_data
-def 대장읽기(수정시각: float) -> pd.DataFrame:
-    return pd.read_csv(run.출력파일, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+@st.cache_data(ttl="1m")
+def 대장읽기() -> pd.DataFrame:
+    return rules.대장읽기()
 
 
 @st.cache_data
@@ -35,7 +35,7 @@ with st.container(horizontal=True, vertical_alignment="center"):
         "접수함 처리",
         icon=":material/play_arrow:",
         type="primary",
-        help="접수함의 원문을 AI로 읽어 data/하자대장.csv를 새로 만듭니다. AI를 건수만큼 호출하고 기존 파일을 덮어씁니다.",
+        help="접수함의 원문을 AI로 읽어 DB 하자대장에 저장합니다. AI를 건수만큼 호출하고, 같은 접수번호는 덮어씁니다.",
     )
     st.caption(f"원문 {len(list(run.입력폴더.glob('*.txt')))}건 · 접수함 폴더 기준")
 
@@ -47,11 +47,16 @@ if 다시처리:
             st.error(f"처리 중 오류가 났습니다: {e}", icon=":material/error:")
     대장읽기.clear()
 
-if not run.출력파일.exists():
+try:
+    df = 대장읽기()
+except Exception as e:
+    st.error(f"하자대장을 읽지 못했습니다: {e}", icon=":material/error:")
+    st.stop()
+
+if df.empty:
     st.info("아직 하자대장이 없습니다. '접수함 처리'를 눌러 만들어 주세요.", icon=":material/info:")
     st.stop()
 
-df = 대장읽기(run.출력파일.stat().st_mtime)
 공사목록 = 공사정보()
 
 # ---- 요약 ----
